@@ -5,25 +5,26 @@ namespace Laravel\Sanctum\Tests\Feature;
 use DateTimeInterface;
 use Illuminate\Auth\EloquentUserProvider;
 use Illuminate\Contracts\Auth\Factory as AuthFactory;
+use Illuminate\Contracts\Auth\Guard as AuthGuard;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use JMac\Testing\Double;
+use JMac\Testing\Integrations\PHPUnit\VerifiesDoubles;
 use Laravel\Sanctum\Events\TokenAuthenticated;
 use Laravel\Sanctum\Guard;
 use Laravel\Sanctum\PersonalAccessToken;
 use Laravel\Sanctum\Sanctum;
-use Mockery;
 use Orchestra\Testbench\Concerns\WithWorkbench;
 use Orchestra\Testbench\TestCase;
 use PHPUnit\Framework\Attributes\DataProvider;
-use stdClass;
 use Workbench\App\Models\User;
 use Workbench\Database\Factories\PersonalAccessTokenFactory;
 use Workbench\Database\Factories\UserFactory;
 
 class GuardTest extends TestCase
 {
-    use RefreshDatabase, WithWorkbench;
+    use RefreshDatabase, VerifiesDoubles, WithWorkbench;
 
     protected function defineEnvironment($app)
     {
@@ -36,17 +37,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_is_attempted_with_web_middleware()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null, 'users');
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-                ->with('web')
-                ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn($fakeUser = new User);
+        $webGuard->expects('user')->returns($fakeUser = new User);
 
         $user = $guard->__invoke(Request::create('/', 'GET'));
 
@@ -56,17 +55,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_is_attempted_with_token_if_no_session_present()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null, 'users');
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-                ->with('web')
-                ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('Authorization', 'Bearer test');
@@ -78,17 +75,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_with_token_fails_if_expired()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, 1, 'users');
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-                ->with('web')
-                ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('Authorization', 'Bearer test');
@@ -107,17 +102,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_with_token_fails_if_expires_at_has_passed()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null, 'users');
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-            ->with('web')
-            ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('Authorization', 'Bearer test');
@@ -136,17 +129,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_with_token_succeeds_if_expires_at_not_passed()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null, 'users');
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-            ->with('web')
-            ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('Authorization', 'Bearer test');
@@ -167,17 +158,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_is_successful_with_token_if_no_session_present()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null);
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-                ->with('web')
-                ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('Authorization', 'Bearer test');
@@ -225,17 +214,15 @@ class GuardTest extends TestCase
     #[DataProvider('invalidTokenDataProvider')]
     public function test_authentication_with_token_fails_if_token_has_invalid_format($invalidToken)
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null, 'users');
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-            ->with('web')
-            ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
 
@@ -305,17 +292,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_is_successful_with_token_in_custom_header()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null);
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-                ->with('web')
-                ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('X-Auth-Token', 'test');
@@ -341,17 +326,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_fails_with_token_in_authorization_header_when_using_custom_header()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null);
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-                ->with('web')
-                ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('Authorization', 'Bearer test');
@@ -375,17 +358,15 @@ class GuardTest extends TestCase
 
     public function test_authentication_fails_with_token_in_custom_header_when_using_default_authorization_header()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null);
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-                ->with('web')
-                ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('X-Auth-Token', 'test');
@@ -421,17 +402,15 @@ class GuardTest extends TestCase
 
     public function test_last_used_at_is_not_tracked_when_disabled()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null, 'users', false);
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-            ->with('web')
-            ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('Authorization', 'Bearer test');
@@ -452,17 +431,15 @@ class GuardTest extends TestCase
 
     public function test_last_used_at_is_tracked_when_enabled()
     {
-        $factory = Mockery::mock(AuthFactory::class);
+        $factory = Double::for(AuthFactory::class);
 
         $guard = new Guard($factory, null, 'users', true);
 
-        $webGuard = Mockery::mock(stdClass::class);
+        $webGuard = Double::for(AuthGuard::class);
 
-        $factory->shouldReceive('guard')
-            ->with('web')
-            ->andReturn($webGuard);
+        $factory->expects('guard')->with('web')->returns($webGuard);
 
-        $webGuard->shouldReceive('user')->once()->andReturn(null);
+        $webGuard->expects('user')->returns(null);
 
         $request = Request::create('/', 'GET');
         $request->headers->set('Authorization', 'Bearer test');
